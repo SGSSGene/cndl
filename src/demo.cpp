@@ -21,6 +21,8 @@
 
 #include "qrqma/template.h"
 
+#include <fstream>
+
 
 namespace 
 {
@@ -34,34 +36,31 @@ cndl::GlobalRoute globalRoute {"/global/?", [](cndl::Request const&) -> cndl::Op
     return templ();
 }, {.methods={"GET", "POST"}}};
 
+auto serveFile(std::filesystem::path file) -> cndl::OptResponse {
+	auto ifs = std::ifstream(file.string(), std::ios::binary);
+	std::stringstream buffer;
+	buffer << ifs.rdbuf();
+
+	auto response = cndl::Response{buffer.str()};
+	if (file.extension() == ".css") {
+		response.fields["Content-Type"] = "text/css; charset=utf-8";
+		return response;
+	} else if (file.extension() == ".js") {
+		response.fields["Content-Type"] = "text/javascript; charset=utf-8";
+		return response;
+	} else if (file.extension() == ".png") {
+		response.fields["Content-Type"] = "image/png";
+		return response;
+	} else {
+		response.fields["Content-Type"] = "text/html; charset=utf-8";
+		return response;
+	}
+	std::cout << "not found " << file << "\n";
+	return std::nullopt;
+};
+
 cndl::GlobalRoute template_route{"/(.*)?", [](cndl::Request const& request, std::string const& req_pat) -> cndl::OptResponse {
-    static std::map<std::string, qrqma::Template> templates;
-    static simplyfile::INotify inotify{IN_NONBLOCK};
-
-    while (auto event = inotify.readEvent()) {
-        templates.erase(event->path);
-    }
-
-    auto path = *optTemplPat / req_pat;
-    auto nat_pat = path.native();
-    auto it = templates.find(nat_pat);
-    if (it == templates.end()) {
-        try {
-            auto loaded = qrqma::defaultLoader()(nat_pat);
-            it = templates.emplace(nat_pat, loaded).first;
-            inotify.watch(nat_pat, IN_CLOSE_WRITE);
-        } catch (std::exception const& e) {
-            return {};
-        }
-    }
-    qrqma::symbol::UnorderedMultiMap url_args;
-    qrqma::symbol::UnorderedMultiMap body_args;
-    std::for_each(begin(request.header.url_args), end(request.header.url_args), [&](auto const& p) { url_args.emplace(p.first, p.second); });
-    std::for_each(begin(request.header.body_args), end(request.header.body_args), [&](auto const& p) { body_args.emplace(p.first, p.second); });
-    return (it->second)({
-        {"url_args", url_args},
-        {"body_args", body_args}
-    });
+	return serveFile("www/" + req_pat);
 }, {.methods={"GET", "POST"}}};
 
 struct : cndl::WebsocketHandler {
@@ -104,6 +103,15 @@ void demo()
     
     cndl::WSRoute wsroute{std::regex{R"(/test/(\d+)/)"}, echo_handler};
     server.getDispatcher().addRoute(&wsroute);
+
+    simplyfile::Epoll epoll;
+    epoll.addFD(server, [&](int) {
+        server.work();
+    });
+
+    while(true) {
+        epoll.work();
+    }
 
     server.loop_forever();
 }
