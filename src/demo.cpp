@@ -80,10 +80,11 @@ struct : cndl::WebsocketHandler {
         ws.send(msg);
     }
 
-    bool onOpen([[maybe_unused]] Request const& request, [[maybe_unused]] Websocket& ws, [[maybe_unused]] int magic) {
+    bool onOpen([[maybe_unused]] Request const& request, [[maybe_unused]] Websocket& ws) {
         std::cout << "socket connected " << request.header.url << std::endl;
+        std::this_thread::sleep_for(std::chrono::milliseconds{100});
         using namespace std::literals::chrono_literals;
-        ws.setAutoPing(1000ms, 100ms);
+//        ws.setAutoPing(1000ms, 100ms);
         return true;
     }
 
@@ -101,13 +102,25 @@ void demo()
     cndl::Server& server = cndl::Server::getGlobalServer();
     server.listen(simplyfile::getHosts("localhost", "8080"));
     
-    cndl::WSRoute wsroute{std::regex{R"(/test/(\d+)/)"}, echo_handler};
+    cndl::WSRoute wsroute{std::regex{R"(/ws)"}, echo_handler};
     server.getDispatcher().addRoute(&wsroute);
 
-    simplyfile::Epoll epoll;
+	auto timer1 = simplyfile::Timer{std::chrono::milliseconds{10}};
+	auto timer2 = simplyfile::Timer{std::chrono::seconds{1}};
+
+	simplyfile::Epoll epoll;
+	epoll.addFD(timer1, [&](int) {
+        std::this_thread::sleep_for(std::chrono::milliseconds{100});
+		timer1.getElapsed(); // clear timer
+	});
+	epoll.addFD(timer2, [&](int) {
+		timer2.getElapsed(); // clear timer;
+	});
+
     epoll.addFD(server, [&](int) {
         server.work();
-    });
+        epoll.modFD(server, EPOLLIN | EPOLLONESHOT);
+    }, EPOLLIN | EPOLLONESHOT);
 
     while(true) {
         epoll.work();
