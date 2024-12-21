@@ -9,7 +9,7 @@
 
 #include <sys/stat.h>
 
-#include <fmt/format.h>
+#include <format>
 
 namespace cndl {
 
@@ -28,7 +28,7 @@ Finally(Func && f) -> Finally<Func>;
 
 }
 
-StaticFileHandler::StaticFileHandler(std::filesystem::path bd) 
+StaticFileHandler::StaticFileHandler(std::filesystem::path bd)
     : base_dir{std::move(bd)}
 {}
 
@@ -42,7 +42,7 @@ OptResponse StaticFileHandler::operator()(Request const& request, std::string co
     if (fstat(f, &statbuf) != 0) {
         throw cndl::Error(500);
     }
-    
+
     cndl::Response response;
     response.fields.emplace("cache-control", "max-age=3600, no-cache");
     response.fields.emplace("last-modified", mkdatestr(statbuf.st_mtim));
@@ -80,7 +80,7 @@ OptResponse StaticFileHandler::operator()(Request const& request, std::string co
             }
             if (start_offset != 0 or end_offset != statbuf.st_size) {
                 response.status_code = 206;
-                response.fields.emplace("Content-Range", fmt::format("bytes {}-{}/{}", start_offset, end_offset - 1, statbuf.st_size));
+                response.fields.emplace("Content-Range", std::format("bytes {}-{}/{}", start_offset, end_offset - 1, statbuf.st_size));
             }
             break;
         }
