@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2020 Lutz Freitag
+// SPDX-License-Identifier: MIT
 #pragma once
 
 #include <simplyfile/socket/Socket.h>

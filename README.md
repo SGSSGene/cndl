@@ -1,3 +1,5 @@
+<!-- SPDX-FileCopyrightText: 2020 Lutz Freitag
+     SPDX-License-Identifier: CC-BY-4.0 -->
 # CNDL
 
 cndl strives to be an easy to embed C++ webserver solution.

@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2020 Lutz Freitag
+// SPDX-License-Identifier: MIT
 #include "HttpProtocol.h"
 #include "ConnectionHandler.h"
 #include "Dispatcher.h"

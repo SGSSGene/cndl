@@ -1,3 +1,5 @@
+// SPDX-FileCopyrightText: 2020 Lutz Freitag
+// SPDX-License-Identifier: MIT
 #include "Dispatcher.h"
 
 #include <mutex>
